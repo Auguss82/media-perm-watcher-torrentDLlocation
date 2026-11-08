@@ -218,4 +218,4 @@ ls -l /dvr/qb/test.txt
 
 ## License
 
-`[add your license here, for example MIT, and include a LICENSE file in the repository]`
+MIT License. See LICENSE file.
