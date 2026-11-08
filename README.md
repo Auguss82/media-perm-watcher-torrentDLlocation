@@ -6,7 +6,7 @@ The script is called `watchplex.sh` and is meant to run as a systemd service.
 
 ## What it does
 
-- Watches one or more base directories **recursively**, each with its own settings: directory mode, file mode, owner and group.
+- Watches one or more base directories **recursively**, each with its own directory mode and file mode, and a configurable owner and group (one default for everything, with optional per-directory overrides).
 - Reacts to three kinds of events:
   - `close_write`: a file finishes being written (rsync, incremental copies)
   - `create`: a new file or directory appears by any method
@@ -44,23 +44,43 @@ sudo chmod +x /opt/scripts/watchplex/watchplex.sh
 
 Create the lock file's directory (`/opt/scripts/watchplex` above) before the first run. The log directory is created automatically.
 
-Edit the configuration block at the top of the script before starting it (see below), in particular `WATCH_CONFIG`.
+Edit the configuration block at the top of the script before starting it (see below), in particular `WATCH_USER`, `WATCH_GROUP` and `WATCH_CONFIG`.
 
 ## Configuration
 
 Everything is set in variables at the top of `watchplex.sh`.
+
+### Owner and group
+
+The user and group that files are given are set by two variables:
+
+```bash
+WATCH_USER="vincent"
+WATCH_GROUP="vincent"
+```
+
+**Change these to the account that should own your media** (for example the user Plex runs as). Both must exist on the system; check with `id USERNAME` and `getent group GROUPNAME`. Numeric IDs work too. The script checks this at startup and exits with a clear error if either is missing.
 
 ### Watched directories
 
 ```bash
 declare -A WATCH_CONFIG
 WATCH_CONFIG=(
-    ["/dvr/qb"]="775:664:auguss82:auguss82"
-    ["/dvr/plex"]="777:666:auguss82:auguss82"
+    ["/dvr/qb"]="775:664"
+    ["/dvr/plex"]="777:666"
 )
 ```
 
-Each entry is `"/base/directory" = "dir_perms:file_perms:owner:group"`. The example above sets directories to `775` and files to `664` under `/dvr/qb`, and `777`/`666` under `/dvr/plex`, both owned by `auguss82:auguss82`. **Change these to your own paths and user.** Every directory listed must exist, or the script refuses to start.
+Each entry is `"/base/directory" = "dir_perms:file_perms"`. The example above sets directories to `775` and files to `664` under `/dvr/qb`, and `777`/`666` under `/dvr/plex`, owned by `WATCH_USER:WATCH_GROUP`. **Change the paths to your own.** Every directory listed must exist, or the script refuses to start.
+
+To give one directory a different owner, add it as the third and fourth fields:
+
+```bash
+["/dvr/plex"]="777:666:plex:media"      # this directory only
+["/dvr/other"]="775:664:plex:"          # custom user, default group
+```
+
+An empty owner or group field falls back to `WATCH_USER` / `WATCH_GROUP`.
 
 ### Settings
 
@@ -69,6 +89,8 @@ Each entry is `"/base/directory" = "dir_perms:file_perms:owner:group"`. The exam
 | `LOGGING` | `true` | Master switch for writing the log file |
 | `DRY_RUN` | `false` | Print what would be done without running `chmod` or `chown` |
 | `LOG_LEVEL` | `INFO` | `ERROR`, `INFO`, `VERBOSE` or `DEBUG` (see below) |
+| `WATCH_USER` | `vincent` | Default owner for fixed files and directories |
+| `WATCH_GROUP` | `vincent` | Default group for fixed files and directories |
 | `LOG_DIR` | `/var/log/watchplex` | Log directory |
 | `LOG_FILE` | `${LOG_DIR}/watchplex.log` | Log file |
 | `LOG_MAX_BYTES` | `10485760` | Rotate the log when it reaches this size (10 MB) |
