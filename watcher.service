@@ -1,0 +1,20 @@
+[Unit]
+Description=Plex Permissions Watcher
+After=network.target local-fs.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/opt/scripts/watchplex/watchplex.sh
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+User=root
+Group=root
+StandardOutput=null
+StandardError=journal
+SyslogIdentifier=watchplex
+
+[Install]
+WantedBy=multi-user.target
