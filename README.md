@@ -55,8 +55,8 @@ Everything is set in variables at the top of `watchplex.sh`.
 The user and group that files are given are set by two variables:
 
 ```bash
-WATCH_USER="vincent"
-WATCH_GROUP="vincent"
+WATCH_USER="auguss82"
+WATCH_GROUP="auguss82"
 ```
 
 **Change these to the account that should own your media** (for example the user Plex runs as). Both must exist on the system; check with `id USERNAME` and `getent group GROUPNAME`. Numeric IDs work too. The script checks this at startup and exits with a clear error if either is missing.
@@ -89,8 +89,8 @@ An empty owner or group field falls back to `WATCH_USER` / `WATCH_GROUP`.
 | `LOGGING` | `true` | Master switch for writing the log file |
 | `DRY_RUN` | `false` | Print what would be done without running `chmod` or `chown` |
 | `LOG_LEVEL` | `INFO` | `ERROR`, `INFO`, `VERBOSE` or `DEBUG` (see below) |
-| `WATCH_USER` | `vincent` | Default owner for fixed files and directories |
-| `WATCH_GROUP` | `vincent` | Default group for fixed files and directories |
+| `WATCH_USER` | `auguss82` | Default owner for fixed files and directories |
+| `WATCH_GROUP` | `auguss82` | Default group for fixed files and directories |
 | `LOG_DIR` | `/var/log/watchplex` | Log directory |
 | `LOG_FILE` | `${LOG_DIR}/watchplex.log` | Log file |
 | `LOG_MAX_BYTES` | `10485760` | Rotate the log when it reaches this size (10 MB) |
