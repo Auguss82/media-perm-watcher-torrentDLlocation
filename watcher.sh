@@ -19,6 +19,17 @@ DRY_RUN=false         # If true, print actions but do not chmod/chown
 LOG_LEVEL="INFO"
 
 # ------------------------------------------------------------
+# OWNERSHIP
+# User and group that files and directories are chown'd to.
+# These apply to every WATCH_CONFIG entry below that does not
+# name its own owner/group. Both must already exist on the
+# system (check with:  id USERNAME   and   getent group GROUPNAME).
+# Numeric IDs also work.
+# ------------------------------------------------------------
+WATCH_USER="auguss82
+WATCH_GROUP="auguss82"
+
+# ------------------------------------------------------------
 # LOG FILE
 # ------------------------------------------------------------
 LOG_DIR="/var/log/watchplex"         # Parent log directory -- change here to relocate everything
@@ -29,12 +40,16 @@ LOG_MAX_BACKUPS=1                     # Number of rotated backups to keep (.1, .
 # ------------------------------------------------------------
 # WATCH CONFIG
 # key   = base directory (watched recursively)
-# value = "dir_perms:file_perms:owner:group"
+# value = "dir_perms:file_perms"                     -> uses WATCH_USER:WATCH_GROUP
+#         "dir_perms:file_perms:owner:group"         -> overrides the owner/group
+#                                                       for this directory only
+# An empty owner or group field also falls back to the defaults,
+# e.g. "775:664:otheruser:" keeps WATCH_GROUP.
 # ------------------------------------------------------------
 declare -A WATCH_CONFIG
 WATCH_CONFIG=(
-    ["/dvr/qb"]="775:664:auguss82:auguss82"
-    ["/dvr/plex"]="777:666:auguss82:auguss82"
+    ["/dvr/qb"]="775:664"
+    ["/dvr/plex"]="777:666"
 )
 
 # ------------------------------------------------------------
@@ -188,11 +203,13 @@ set -Eeuo pipefail
 # ============================================================
 get_dir_perm()  { echo "${WATCH_CONFIG[$1]}" | cut -d: -f1; }
 get_file_perm() { echo "${WATCH_CONFIG[$1]}" | cut -d: -f2; }
+
+# Owner and group for a watch root: the entry's own fields if given,
+# otherwise the WATCH_USER / WATCH_GROUP defaults. Prints "owner:group".
 get_owner() {
-    local o g
-    o=$(echo "${WATCH_CONFIG[$1]}" | cut -d: -f3)
-    g=$(echo "${WATCH_CONFIG[$1]}" | cut -d: -f4)
-    echo "${o}:${g}"
+    local _dp _fp o g
+    IFS=: read -r _dp _fp o g <<< "${WATCH_CONFIG[$1]}"
+    echo "${o:-$WATCH_USER}:${g:-$WATCH_GROUP}"
 }
 
 # ============================================================
@@ -206,9 +223,24 @@ startup_checks() {
         ok=false
     }
 
+    local dir owner o g
     for dir in "${!WATCH_CONFIG[@]}"; do
         [[ -d "$dir" ]] || {
             log_error "Watch directory does not exist: $dir"
+            ok=false
+        }
+
+        # The owner and group that will be applied must exist, otherwise
+        # every chown would fail and be retried forever.
+        owner="$(get_owner "$dir")"
+        o="${owner%%:*}"
+        g="${owner#*:}"
+        id -u "$o" &>/dev/null || {
+            log_error "User '$o' (for $dir) does not exist -- check WATCH_USER / WATCH_CONFIG"
+            ok=false
+        }
+        getent group "$g" &>/dev/null || {
+            log_error "Group '$g' (for $dir) does not exist -- check WATCH_GROUP / WATCH_CONFIG"
             ok=false
         }
     done
@@ -454,6 +486,7 @@ startup_checks
 log_info "=========================================="
 log_info "watchplex.sh starting"
 log_info "  LOG_LEVEL        : $LOG_LEVEL  LOGGING: $LOGGING  DRY_RUN: $DRY_RUN"
+log_info "  DEFAULT OWNER    : ${WATCH_USER}:${WATCH_GROUP}"
 log_info "  SWEEP_ON_STARTUP : $SWEEP_ON_STARTUP"
 log_info "  INOTIFY_EVENTS   : $INOTIFY_EVENTS"
 log_info "  MAX_RESTARTS     : ${MAX_RESTART_ATTEMPTS} (0=unlimited)"
