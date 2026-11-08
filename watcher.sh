@@ -26,7 +26,7 @@ LOG_LEVEL="INFO"
 # system (check with:  id USERNAME   and   getent group GROUPNAME).
 # Numeric IDs also work.
 # ------------------------------------------------------------
-WATCH_USER="auguss82
+WATCH_USER="auguss82"
 WATCH_GROUP="auguss82"
 
 # ------------------------------------------------------------
